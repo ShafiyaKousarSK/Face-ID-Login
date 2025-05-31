@@ -1,4 +1,4 @@
-# Face ID Recognition System
+# Face ID Recognition based Attendance System
 
 A modern and efficient face recognition-based attendance system with real-time updates and a beautiful user interface.
 
