@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+{% block title %}Register New Face{% endblock %}
+{% block content %}
+<nav class="navbar">
+    <div class="navbar-container">
+        
+        <div class="navbar-links">
+            <a href="/">Home</a>
+            <a href="/register">Register New Face</a>
+            <a href="/attendance">View Login Details</a>
+            <a href="/verify/single">Single Face Recognition</a>
+            <a href="/verify/multiple">Multi Face Recognition</a>
+            <a href="/profile">Candidate Profile</a>
+            <a href="/contact">Contact Us</a>
+        </div>
+    </div>
+</nav>
+
+    <div class="card">
+        <div class="icon" style="display:flex;justify-content:center;margin-bottom:18px;">
+            <div style="background:#e6e0ff;width:80px;height:80px;border-radius:50%;display:flex;align-items:center;justify-content:center;">
+                <img src="/static/images/faceid-bg1.jpeg" alt="Face ID Icon" style="width:60px; height:60px; border-radius:50%; background:#fff;" />
+            </div>
+        </div>
+        <h1>Register New Face</h1>
+        <form id="registerForm" action="/api/register" method="post" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="id">ID:</label>
+                <input type="text" id="id" name="id" required />
+            </div>
+            <div class="form-group">
+                <label for="name">Name:</label>
+                <input type="text" id="name" name="name" required />
+            </div>
+            <div class="form-group">
+                <label for="email">Email:</label>
+                <input type="email" id="email" name="email" required />
+            </div>
+            <div class="form-group">
+                <label for="file">Upload Image:</label>
+                <input type="file" id="file" name="file" accept="image/*" />
+            </div>
+            <button type="submit">Register</button>
+        </form>
+        <div class="capture">
+            <h2>Capture Live Image</h2>
+            <video id="video" width="320" height="240" autoplay style="display:block;"></video>
+            <canvas id="canvas" width="320" height="240" style="display:none;"></canvas>
+            <div class="capture-btns">
+                <button onclick="startCamera()" type="button">Start Camera</button>
+                <button onclick="captureImage()" type="button">Capture</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        let videoStream = null;
+        let capturedImageData = null;
+        function startCamera() {
+            const video = document.getElementById('video');
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(stream => { videoStream = stream; video.srcObject = stream; })
+                .catch(err => alert('Could not access camera: ' + err));
+        }
+        function captureImage() {
+            const video = document.getElementById('video');
+            const canvas = document.getElementById('canvas');
+            const context = canvas.getContext('2d');
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            capturedImageData = canvas.toDataURL('image/jpeg');
+            alert('Image captured! You can now register.');
+        }
+        document.getElementById('registerForm').addEventListener('submit', function(e) {
+            const fileInput = document.getElementById('file');
+            const id = document.getElementById('id').value;
+            if (!fileInput.files.length && !capturedImageData) {
+                alert('Please upload an image or capture a live image before registering.');
+                e.preventDefault();
+                return false;
+            }
+            // If a captured image exists, send it via fetch and prevent default form submission
+            if (capturedImageData) {
+                e.preventDefault();
+                fetch('/api/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ image: capturedImageData, name: document.getElementById('name').value, email: document.getElementById('email').value, id: id })
+                })
+                .then(response => response.json())
+                .then(data => alert(data.success ? 'Registration successful!' : (data.error || 'Registration failed.')))
+                .catch(error => alert('Error: ' + error));
+            }
+        });
+    </script>
+{% endblock %} 

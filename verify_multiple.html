@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+{% block title %}Multi Face Recognition{% endblock %}
+{% block content %}
+<nav class="navbar">
+    <div class="navbar-container">
+        <!span class="navbar-brand" onclick="window.location.href='/'" style="cursor:pointer; font-weight:700; font-size:1.2rem; color:#2575fc;">Face ID System</span>
+        <div class="navbar-links">
+            <a href="/">Home</a>
+            <a href="/register">Register New Face</a>
+            <a href="/attendance">View Login Details</a>
+            <a href="/verify/single">Single Face Recognition</a>
+            <a href="/verify/multiple">Multi Face Recognition</a>
+            <a href="/profile">Candidate Profile</a>
+            <a href="/contact">Contact Us</a>
+        </div>
+    </div>
+</nav>
+    <div class="card">
+        <div class="icon" style="display:flex;justify-content:center;margin-bottom:18px;">
+            <div style="background:#e6e0ff;width:80px;height:80px;border-radius:50%;display:flex;align-items:center;justify-content:center;">
+                <img src="/static/images/faceid-bg1.jpeg" alt="Face ID Icon" style="width:60px; height:60px; border-radius:50%; background:#fff;" />
+            </div>
+        </div>
+        <h1>Multi Face Recognition</h1>
+        <div class="form-group">
+            <label for="user_ids">User IDs (comma-separated):</label>
+            <input type="text" id="user_ids" name="user_ids" required placeholder="e.g. id1,id2,id3" />
+        </div>
+        <div class="form-group">
+            <label for="fileInput">Upload Image:</label>
+            <input type="file" id="fileInput" accept="image/*" />
+            <button onclick="uploadImage()">Upload & Verify</button>
+        </div>
+        <div class="capture">
+            <h2>Capture Live Image</h2>
+            <video id="video" width="320" height="240" autoplay style="display:block;"></video>
+            <canvas id="canvas" width="320" height="240" style="display:none;"></canvas>
+            <div class="capture-btns">
+                <button onclick="startCamera()" type="button">Start Camera</button>
+                <button onclick="captureImage()" type="button">Capture & Verify</button>
+            </div>
+        </div>
+        <div id="result"></div>
+    </div>
+    <script>
+        let videoStream = null;
+        function startCamera() {
+            const video = document.getElementById('video');
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(stream => { videoStream = stream; video.srcObject = stream; })
+                .catch(err => alert('Could not access camera: ' + err));
+        }
+        function uploadImage() {
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+            const userIds = document.getElementById('user_ids').value;
+            if (!userIds) { document.getElementById('result').innerText = 'Please enter User IDs.'; return; }
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    fetch('/api/verify/multiple', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ ids: userIds.split(','), image: e.target.result })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            let msg = 'Attendance marked for: ' + data.results.map(r => r.name).join(', ');
+                            document.getElementById('result').innerText = msg;
+                        } else {
+                            document.getElementById('result').innerText = data.error || 'Verification failed.';
+                        }
+                    })
+                    .catch(error => document.getElementById('result').innerText = 'Error: ' + error);
+                };
+                reader.readAsDataURL(file);
+            } else {
+                document.getElementById('result').innerText = 'Please select a file.';
+            }
+        }
+        function captureImage() {
+            const userIds = document.getElementById('user_ids').value;
+            if (!userIds) { document.getElementById('result').innerText = 'Please enter User IDs.'; return; }
+            const video = document.getElementById('video');
+            const canvas = document.getElementById('canvas');
+            const context = canvas.getContext('2d');
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const dataURL = canvas.toDataURL('image/jpeg');
+            fetch('/api/verify/multiple', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ids: userIds.split(','), image: dataURL })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    let msg = 'Attendance marked for: ' + data.results.map(r => r.name).join(', ');
+                    document.getElementById('result').innerText = msg;
+                } else {
+                    document.getElementById('result').innerText = data.error || 'Verification failed.';
+                }
+            })
+            .catch(error => document.getElementById('result').innerText = 'Error: ' + error);
+        }
+    </script>
+{% endblock %} 

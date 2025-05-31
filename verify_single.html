@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+{% block title %}Single Face Recognition{% endblock %}
+{% block content %}
+<nav class="navbar">
+    <div class="navbar-container">
+        <!span class="navbar-brand" onclick="window.location.href='/'" style="cursor:pointer; font-weight:700; font-size:1.2rem; color:#2575fc;">Face ID System</span>
+        <div class="navbar-links">
+            <a href="/">Home</a>
+            <a href="/register">Register New Face</a>
+            <a href="/attendance">View Login Details</a>
+            <a href="/verify/single">Single Face Recognition</a>
+            <a href="/verify/multiple">Multi Face Recognition</a>
+            <a href="/profile">Candidate Profile</a>
+            <a href="/contact">Contact Us</a>
+        </div>
+    </div>
+</nav>
+
+<div class="card">
+    <div class="icon">
+        <img src="/static/images/faceid-bg1.jpeg" alt="Face ID Icon" style="width:60px; height:60px; border-radius:50%; box-shadow:0 0 0 10px #e0e0ff; background:#fff;" />
+    </div>
+    <h1>Single Face Recognition</h1>
+    <div class="form-group">
+        <label for="user_id">User ID:</label>
+        <input type="text" id="user_id" name="user_id" required />
+    </div>
+    <div class="form-group">
+        <label for="fileInput">Upload Image:</label>
+        <input type="file" id="fileInput" accept="image/*" />
+        <button onclick="uploadImage()">Upload & Verify</button>
+    </div>
+    <div class="capture">
+        <h2>Capture Live Image</h2>
+        <video id="video" width="320" height="240" autoplay style="display:block;"></video>
+        <canvas id="canvas" width="320" height="240" style="display:none;"></canvas>
+        <div class="capture-btns">
+            <button onclick="startCamera()" type="button">Start Camera</button>
+            <button onclick="captureImage()" type="button">Capture & Verify</button>
+        </div>
+    </div>
+    <div id="result"></div>
+</div>
+<script>
+    let videoStream = null;
+    function startCamera() {
+        const video = document.getElementById('video');
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => { videoStream = stream; video.srcObject = stream; })
+            .catch(err => alert('Could not access camera: ' + err));
+    }
+    function uploadImage() {
+        const fileInput = document.getElementById('fileInput');
+        const file = fileInput.files[0];
+        const userId = document.getElementById('user_id').value;
+        if (!userId) { document.getElementById('result').innerText = 'Please enter User ID.'; return; }
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                fetch('/api/verify/single', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: userId, image: e.target.result })
+                })
+                .then(response => response.json())
+                .then(data => document.getElementById('result').innerText = data.success ? 'Attendance marked for ' + data.name : (data.error || 'Verification failed.'))
+                .catch(error => document.getElementById('result').innerText = 'Error: ' + error);
+            };
+            reader.readAsDataURL(file);
+        } else {
+            document.getElementById('result').innerText = 'Please select a file.';
+        }
+    }
+    function captureImage() {
+        const userId = document.getElementById('user_id').value;
+        if (!userId) { document.getElementById('result').innerText = 'Please enter User ID.'; return; }
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const context = canvas.getContext('2d');
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const dataURL = canvas.toDataURL('image/jpeg');
+        fetch('/api/verify/single', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: userId, image: dataURL })
+        })
+        .then(response => response.json())
+        .then(data => document.getElementById('result').innerText = data.success ? 'Attendance marked for ' + data.name : (data.error || 'Verification failed.'))
+        .catch(error => document.getElementById('result').innerText = 'Error: ' + error);
+    }
+</script>
+{% endblock %} 

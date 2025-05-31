@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block title %}Login Details List{% endblock %}
+
+{% block head %}
+<style>
+    .filter { margin: 20px auto; text-align: center; }
+    select, input[type="date"], input[type="month"], input[type="number"] { padding: 8px; margin-left: 5px; }
+    .card {
+        margin: 80px auto 0 auto;
+    }
+    .date-group {
+        font-weight: bold;
+        margin-top: 20px;
+        margin-bottom: 5px;
+        color: #2575fc;
+    }
+</style>
+<script>
+    function showPicker() {
+        var period = document.getElementById('period').value;
+        document.getElementById('datePicker').style.display = (period === 'daily') ? '' : 'none';
+        document.getElementById('monthPicker').style.display = (period === 'monthly') ? '' : 'none';
+        document.getElementById('yearPicker').style.display = (period === 'yearly') ? '' : 'none';
+    }
+    window.onload = showPicker;
+    function filterAttendance() {
+        var period = document.getElementById('period').value;
+        var url = '/attendance?period=' + period;
+        if (period === 'daily') {
+            var date = document.getElementById('datePicker').value;
+            if (date) url += '&date=' + date;
+        }
+        if (period === 'monthly') {
+            var month = document.getElementById('monthPicker').value;
+            if (month) url += '&month=' + month;
+        }
+        if (period === 'yearly') {
+            var year = document.getElementById('yearPicker').value;
+            if (year) url += '&year=' + year;
+        }
+        window.location.href = url;
+    }
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="card" style="display: flex; flex-direction: column;">
+    <div style="width:100%;">
+        <h1 style="margin-bottom: 10px;">Login Details List</h1>
+        <div class="filter" style="margin-bottom: 24px;">
+            <label for="period">Show:</label>
+            <select id="period" onchange="showPicker()">
+                <option value="all" {% if period == 'all' %}selected{% endif %}>All</option>
+                <option value="daily" {% if period == 'daily' %}selected{% endif %}>Daily</option>
+                <option value="monthly" {% if period == 'monthly' %}selected{% endif %}>Monthly</option>
+                <option value="yearly" {% if period == 'yearly' %}selected{% endif %}>Yearly</option>
+            </select>
+            <input type="date" id="datePicker" style="display:none;" value="{{ date or '' }}" />
+            <input type="month" id="monthPicker" style="display:none;" value="{{ month or '' }}" />
+            <input type="number" id="yearPicker" style="display:none; width:90px;" min="2000" max="2100" step="1" placeholder="Year" value="{{ year or '' }}" />
+            <button onclick="filterAttendance()">Show</button>
+        </div>
+    </div>
+    <div style="width:100%;">
+    {% if grouped_attendance %}
+        {% for group_date, records in grouped_attendance.items() %}
+            <div class="date-group">{{ group_date }}</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>ID</th>
+                        <th>Time</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in records %}
+                    <tr>
+                        <td>{{ record.name }}</td>
+                        <td>{{ record.id }}</td>
+                        <td>{{ record.time }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endfor %}
+    {% else %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>ID</th>
+                    <th>Time</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in attendance %}
+                    <tr>
+                        <td>{{ record.name }}</td>
+                        <td>{{ record.id }}</td>
+                        <td>{{ record.time }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endif %}
+    </div>
+</div>
+{% endblock %} 
